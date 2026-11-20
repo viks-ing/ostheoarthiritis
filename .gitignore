@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Data and large files (never commit raw medical datasets)
+**/data/raw/
+**/data/processed/
+*.tar.gz
+*.zip
+*.tar
+*.h5
+*.hdf5
+
+# Model weights and exports
+*.pt
+*.pth
+*.onnx
+**/models/*.pt
+**/models/*.pth
+**/models/*.onnx
+
+# Outputs and logs
+**/outputs/
+*.log
+.ipynb_checkpoints/
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Node.js & Web
+node_modules/
+dist/
+build/
+.cache/
+.pytest_cache/
+
+# Databases & local uploads
+*.sqlite3
+**/media/
+**/uploaded_xrays/

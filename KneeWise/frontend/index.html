@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KneeWise - Clinical AI & Rehabilitation Testbench</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <!-- React 18 & Babel via CDN for Zero-Build Immediate Testing -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- MediaPipe Pose for real-time webcam pose detection -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #131b2e;
+      --bg-card: #1a233b;
+      --bg-input: #0f172a;
+      --border-color: #273553;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-cyan: #06b6d4;
+      --accent-blue: #3b82f6;
+      --success-green: #10b981;
+      --warning-amber: #f59e0b;
+      --danger-red: #ef4444;
+      --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .app-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.85rem 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #fff;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .brand-tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 9999px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      text-transform: uppercase;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      font-size: 0.825rem;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.7rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .status-dot.online {
+      background: var(--success-green);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    }
+
+    .status-dot.offline {
+      background: var(--danger-red);
+    }
+
+    .nav-tabs {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      gap: 0.25rem;
+      padding: 0 1.5rem;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      padding: 0.85rem 1.15rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      color: var(--accent-cyan);
+      border-bottom-color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-success {
+      background: var(--success-green);
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: var(--danger-red);
+      color: #fff;
+    }
+
+    .btn-sm {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-tile {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+    }
+
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .metric-value.cyan {
+      color: var(--accent-cyan);
+    }
+
+    .metric-value.green {
+      color: var(--success-green);
+    }
+
+    .data-table-container {
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.875rem;
+    }
+
+    .data-table th {
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .data-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .alert-banner {
+      padding: 0.85rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .alert-banner.info {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+    }
+
+    .alert-banner.warning {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fcd34d;
+    }
+
+    .alert-banner.success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+
+    .alert-banner.danger {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .prob-bar-container {
+      margin-bottom: 0.75rem;
+    }
+
+    .prob-bar-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.825rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .prob-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: var(--bg-input);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .prob-bar-fill {
+      height: 100%;
+      border-radius: 9999px;
+      transition: width 0.3s ease;
+    }
+
+    .code-block {
+      background: #070a11;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: #38bdf8;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const DJANGO_BASE_URL = 'http://127.0.0.1:8080';
+    const FASTAPI_BASE_URL = 'http://127.0.0.1:8000';
+
+    const TOKEN_KEY = 'kneewise_access_token';
+    const USER_KEY = 'kneewise_user';
+
+    const authStorage = {
+      getToken: () => localStorage.getItem(TOKEN_KEY),
+      setTokens: (access) => localStorage.setItem(TOKEN_KEY, access),
+      getUser: () => {
+        try {
+          const u = localStorage.getItem(USER_KEY);
+          return u ? JSON.parse(u) : null;
+        } catch { return null; }
+      },
+      setUser: (u) => localStorage.setItem(USER_KEY, JSON.stringify(u)),
+      clear: () => {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+      }
+    };
+
+    async function apiFetch(endpoint, options = {}) {
+      const token = authStorage.getToken();
+      const headers = { ...(options.headers || {}) };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
+      }
+      const url = endpoint.startsWith('http') ? endpoint : `${DJANGO_BASE_URL}${endpoint}`;
+      return await fetch(url, { ...options, headers });
+    }
+
+    const KL_LABELS = {
+      0: { title: 'KL0: Normal', desc: 'No radiographic features of osteoarthritis', color: '#10b981' },
+      1: { title: 'KL1: Doubtful', desc: 'Possible osteophytic lipping and doubtful narrowing', color: '#38bdf8' },
+      2: { title: 'KL2: Minimal', desc: 'Definite osteophytes, definite unimpaired joint space', color: '#f59e0b' },
+      3: { title: 'KL3: Moderate', desc: 'Moderate joint space reduction, multiple osteophytes', color: '#f97316' },
+      4: { title: 'KL4: Severe', desc: 'Severe joint space loss, marked sclerosis, bone deformity', color: '#ef4444' },
+    };
+
+    function App() {
+      const [activeTab, setActiveTab] = useState('screening');
+      const [user, setUser] = useState(authStorage.getUser());
+      const [backendOnline, setBackendOnline] = useState(false);
+      const [fastapiOnline, setFastapiOnline] = useState(false);
+      const [patients, setPatients] = useState([]);
+      const [selectedPatientId, setSelectedPatientId] = useState('');
+
+      const checkHealth = async () => {
+        try {
+          const res = await fetch(`${DJANGO_BASE_URL}/api/auth/token/`, { method: 'OPTIONS' });
+          setBackendOnline(res.status < 500);
+        } catch { setBackendOnline(false); }
+
+        try {
+          const res = await fetch(`${FASTAPI_BASE_URL}/health`);
+          setFastapiOnline(res.ok);
+        } catch { setFastapiOnline(false); }
+      };
+
+      const loadPatients = async () => {
+        try {
+          const res = await apiFetch('/api/screening/patients/');
+          if (res.ok) {
+            const data = await res.json();
+            const list = Array.isArray(data) ? data : data.results || [];
+            setPatients(list);
+            if (list.length > 0 && !selectedPatientId) setSelectedPatientId(list[0].id);
+          }
+        } catch (e) { console.warn('Could not load patients:', e); }
+      };
+
+      useEffect(() => {
+        checkHealth();
+        const init = async () => {
+          if (!authStorage.getToken()) {
+            try {
+              const loginRes = await fetch(`${DJANGO_BASE_URL}/api/auth/token/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'dr_sharma', password: 'SecurePass123!' })
+              });
+              if (loginRes.ok) {
+                const tok = await loginRes.json();
+                authStorage.setTokens(tok.access);
+                authStorage.setUser({ username: 'dr_sharma' });
+                setUser({ username: 'dr_sharma' });
+              }
+            } catch (e) {
+              console.warn('Auto auth notice:', e);
+            }
+          }
+          await loadPatients();
+        };
+        init();
+        const iv = setInterval(checkHealth, 8000);
+        return () => clearInterval(iv);
+      }, [user]);
+
+      return (
+        <div className="app-container">
+          <header className="app-header">
+            <div className="brand">
+              <div className="brand-icon">K</div>
+              <span className="brand-title">KneeWise</span>
+              <span className="brand-tag">Clinical Testbench</span>
+            </div>
+
+            <div className="header-status">
+              <div className="status-pill">
+                <span className={`status-dot ${backendOnline ? 'online' : 'offline'}`} />
+                <span>Django (8080): {backendOnline ? 'Online' : 'Offline'}</span>
+              </div>
+              <div className="status-pill">
+                <span className={`status-dot ${fastapiOnline ? 'online' : 'offline'}`} />
+                <span>FastAPI (8000): {fastapiOnline ? 'Online' : 'Offline'}</span>
+              </div>
+              {user ? (
+                <div className="status-pill" style={{ borderColor: 'var(--accent-cyan)' }}>
+                  <span>Dr. {user.username}</span>
+                  <button onClick={() => { authStorage.clear(); setUser(null); }} className="btn btn-sm" style={{ color: '#ef4444', background: 'transparent' }}>Logout</button>
+                </div>
+              ) : (
+                <button onClick={() => setActiveTab('auth')} className="btn btn-primary btn-sm">Sign In</button>
+              )}
+            </div>
+          </header>
+
+          <nav className="nav-tabs">
+            <button className={`tab-btn ${activeTab === 'screening' ? 'active' : ''}`} onClick={() => setActiveTab('screening')}>🩻 X-ray AI Screening</button>
+            <button className={`tab-btn ${activeTab === 'rehab' ? 'active' : ''}`} onClick={() => setActiveTab('rehab')}>🏃 Rehabilitation Studio</button>
+            <button className={`tab-btn ${activeTab === 'patients' ? 'active' : ''}`} onClick={() => setActiveTab('patients')}>👥 Patients Directory</button>
+            <button className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>📊 Rehab History</button>
+            <button className={`tab-btn ${activeTab === 'inspector' ? 'active' : ''}`} onClick={() => setActiveTab('inspector')}>🩺 API Inspector</button>
+            <button className={`tab-btn ${activeTab === 'auth' ? 'active' : ''}`} onClick={() => setActiveTab('auth')}>🔐 Clinician Auth</button>
+          </nav>
+
+          <main className="main-content">
+            {activeTab === 'screening' && <ScreeningTab patients={patients} selectedPatientId={selectedPatientId} setSelectedPatientId={setSelectedPatientId} />}
+            {activeTab === 'rehab' && <RehabTab patients={patients} selectedPatientId={selectedPatientId} setSelectedPatientId={setSelectedPatientId} />}
+            {activeTab === 'patients' && <PatientsTab patients={patients} onRefresh={loadPatients} onSelectScreening={(p) => { setSelectedPatientId(p.id); setActiveTab('screening'); }} onSelectRehab={(p) => { setSelectedPatientId(p.id); setActiveTab('rehab'); }} />}
+            {activeTab === 'history' && <HistoryTab patients={patients} />}
+            {activeTab === 'inspector' && <InspectorTab />}
+            {activeTab === 'auth' && <AuthTab user={user} setUser={setUser} onSuccess={() => setActiveTab('screening')} />}
+          </main>
+        </div>
+      );
+    }
+
+    // --- TAB: SCREENING ---
+    function ScreeningTab({ patients, selectedPatientId, setSelectedPatientId }) {
+      const [laterality, setLaterality] = useState('RIGHT');
+      const [file, setFile] = useState(null);
+      const [previewUrl, setPreviewUrl] = useState(null);
+      const [threshold, setThreshold] = useState(0.30);
+      const [uploading, setUploading] = useState(false);
+      const [result, setResult] = useState(null);
+      const [error, setError] = useState(null);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!file || !selectedPatientId) { setError('Select patient and file.'); return; }
+        setUploading(true);
+        setError(null);
+        try {
+          const fd = new FormData();
+          fd.append('file', file);
+          fd.append('image', file);
+          fd.append('patient_id', selectedPatientId);
+          fd.append('patient', selectedPatientId);
+          fd.append('knee_laterality', laterality);
+          fd.append('laterality', laterality);
+
+          const upRes = await apiFetch('/api/screening/upload/', { method: 'POST', body: fd });
+          if (!upRes.ok) {
+            const errData = await upRes.json().catch(() => ({}));
+            throw new Error(errData.detail || errData.message || `Upload failed (HTTP ${upRes.status})`);
+          }
+          const upData = await upRes.json();
+          const xrayId = upData.uploaded_xray?.id || upData.id;
+
+          let predRes = await apiFetch(`/api/screening/predict/${xrayId}/?threshold=${threshold}`, { method: 'POST' });
+          if (!predRes.ok) {
+            predRes = await apiFetch('/api/screening/predict/', {
+              method: 'POST',
+              body: JSON.stringify({ uploaded_xray_id: xrayId, threshold: threshold })
+            });
+          }
+          if (!predRes.ok) {
+            const errData = await predRes.json().catch(() => ({}));
+            throw new Error(errData.detail || errData.message || `Prediction failed (HTTP ${predRes.status})`);
+          }
+          const predData = await predRes.json();
+          setResult(predData.prediction || predData.screening_result || predData);
+        } catch (err) { setError(err.message); }
+        finally { setUploading(false); }
+      };
+
+      return (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: '1.5rem' }}>
+          <div className="card">
+            <h2 className="card-title">🩻 Knee Radiograph Upload</h2>
+            {error && <div className="alert-banner danger">⚠️ {error}</div>}
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label className="form-label">Patient</label>
+                <select className="form-select" value={selectedPatientId} onChange={e => setSelectedPatientId(e.target.value)} required>
+                  <option value="">-- Select Patient --</option>
+                  {patients.map(p => <option key={p.id} value={p.id}>{p.patient_id} - {p.first_name} {p.last_name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Laterality</label>
+                <select className="form-select" value={laterality} onChange={e => setLaterality(e.target.value)}>
+                  <option value="RIGHT">Right Knee</option>
+                  <option value="LEFT">Left Knee</option>
+                  <option value="BILATERAL">Bilateral</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Radiograph File</label>
+                <input type="file" accept=".png,.jpg,.jpeg" className="form-input" onChange={e => {
+                  const f = e.target.files[0];
+                  if (f) { setFile(f); setPreviewUrl(URL.createObjectURL(f)); setResult(null); }
+                }} />
+              </div>
+              {previewUrl && <img src={previewUrl} style={{ maxHeight: '160px', borderRadius: '6px', marginBottom: '1rem' }} />}
+              <div className="form-group">
+                <label className="form-label">Threshold: {threshold.toFixed(2)}</label>
+                <input type="range" min="0.05" max="0.95" step="0.05" value={threshold} onChange={e => setThreshold(parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={uploading || !file}>
+                {uploading ? 'Processing AI...' : '🚀 Submit & Run AI Grading'}
+              </button>
+            </form>
+          </div>
+
+          <div className="card">
+            {result ? (
+              <div>
+                <div className="card-header">
+                  <h2 className="card-title">Analysis Result</h2>
+                  <span className="brand-tag" style={{ background: (result.binary_referral_recommended || result.is_oa_likely) ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)', borderColor: (result.binary_referral_recommended || result.is_oa_likely) ? '#ef4444' : '#10b981', color: (result.binary_referral_recommended || result.is_oa_likely) ? '#fca5a5' : '#6ee7b7' }}>
+                    {(result.binary_referral_recommended || result.is_oa_likely) ? '⚠️ REFERRAL RECOMMENDED' : '✅ ROUTINE MONITORING'}
+                  </span>
+                </div>
+                <div className="metrics-grid">
+                  <div className="metric-tile">
+                    <span className="metric-label">Predicted Grade</span>
+                    <span className="metric-value" style={{ color: KL_LABELS[result.predicted_grade ?? result.predicted_kl_grade]?.color }}>KL {result.predicted_grade ?? result.predicted_kl_grade}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{KL_LABELS[result.predicted_grade ?? result.predicted_kl_grade]?.desc}</span>
+                  </div>
+                  <div className="metric-tile">
+                    <span className="metric-label">P(Definite OA)</span>
+                    <span className="metric-value cyan">{(((result.binary_oa_risk ?? result.oa_probability) || 0) * 100).toFixed(1)}%</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cutoff: {threshold.toFixed(2)}</span>
+                  </div>
+                </div>
+                <h4 style={{ textTransform: 'uppercase', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>KL Probabilities</h4>
+                {[0, 1, 2, 3, 4].map(g => {
+                  const probs = result.kl_probabilities || result.class_probabilities || {};
+                  const probVal = probs[`KL${g}`] ?? probs[`KL_${g}`] ?? 0;
+                  const pct = (probVal * 100).toFixed(1);
+                  return (
+                    <div key={g} className="prob-bar-container">
+                      <div className="prob-bar-header">
+                        <span>{KL_LABELS[g].title}</span>
+                        <span>{pct}%</span>
+                      </div>
+                      <div className="prob-bar-bg">
+                        <div className="prob-bar-fill" style={{ width: `${pct}%`, background: KL_LABELS[g].color }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                Upload an X-ray to see KL severity probabilities and binary screening risk.
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // --- TAB: REHAB STUDIO (Real Webcam + Python MediaPipe CV Engine) ---
+    function RehabTab({ patients, selectedPatientId, setSelectedPatientId }) {
+      // Session & CV States
+      const [sessionActive, setSessionActive] = useState(false);
+      const [sessionId, setSessionId] = useState(null);
+      const [selectedLeg, setSelectedLeg] = useState('auto');
+      const [detectedLeg, setDetectedLeg] = useState('LEFT');
+
+      const switchLeg = (newLeg) => {
+        setSelectedLeg(newLeg);
+        setDetectedLeg(newLeg.toUpperCase());
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ action: 'change_leg', selected_leg: newLeg }));
+        }
+      };
+      const [kneeAngle, setKneeAngle] = useState(null);
+      const [smoothedAngle, setSmoothedAngle] = useState(null);
+      const [repCount, setRepCount] = useState(0);
+      const [stateStr, setStateStr] = useState('IDLE');
+      const [feedback, setFeedback] = useState('Enable camera to begin seated knee extension tracking.');
+      const [feedbackSeverity, setFeedbackSeverity] = useState('info');
+      const [trackingStatus, setTrackingStatus] = useState('OFF');
+      const [landmarkConfidence, setLandmarkConfidence] = useState(0);
+      const [report, setReport] = useState(null);
+
+      // Camera States
+      const [cameraActive, setCameraActive] = useState(false);
+      const [cameraLoading, setCameraLoading] = useState(false);
+      const [cameraError, setCameraError] = useState(null);
+      const [devices, setDevices] = useState([]);
+      const [selectedDeviceId, setSelectedDeviceId] = useState('');
+      const [transportMode, setTransportMode] = useState('WS'); // 'WS' or 'HTTP'
+
+      // DOM & Stream Refs
+      const videoRef = useRef(null);
+      const canvasRef = useRef(null);
+      const offscreenCanvasRef = useRef(null);
+      const mediaStreamRef = useRef(null);
+      const wsRef = useRef(null);
+      const frameIntervalRef = useRef(null);
+      const isProcessingFrameRef = useRef(false);
+
+      // Session Tracking Accumulators
+      const sessionStartRef = useRef(null);
+      const totalFramesRef = useRef(0);
+      const trackedFramesRef = useRef(0);
+      const excursionsRef = useRef([]);
+      const maxAnglesRef = useRef([]);
+
+      // 1. Enumerate available cameras
+      const loadVideoDevices = async () => {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+          setCameraError('MediaDevices API not supported in this browser environment.');
+          return;
+        }
+        try {
+          const allDevs = await navigator.mediaDevices.enumerateDevices();
+          const videoDevs = allDevs.filter(d => d.kind === 'videoinput');
+          setDevices(videoDevs);
+          if (videoDevs.length > 0 && !selectedDeviceId) {
+            setSelectedDeviceId(videoDevs[0].deviceId);
+          }
+        } catch (e) {
+          console.warn('Could not enumerate video devices:', e);
+        }
+      };
+
+      useEffect(() => {
+        loadVideoDevices();
+      }, []);
+
+      // 2. Explicit Camera Start
+      const startCamera = async () => {
+        setCameraLoading(true);
+        setCameraError(null);
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setCameraError('Camera access requires a secure origin (localhost or HTTPS) and a supported browser.');
+          setCameraLoading(false);
+          return;
+        }
+
+        try {
+          if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach(t => t.stop());
+          }
+
+          const constraints = {
+            video: {
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
+              facingMode: selectedDeviceId ? undefined : { ideal: 'user' }
+            },
+            audio: false
+          };
+
+          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+          mediaStreamRef.current = stream;
+
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play();
+          }
+
+          const videoTrack = stream.getVideoTracks()[0];
+          if (videoTrack) {
+            videoTrack.onended = () => {
+              setCameraError('Camera device was disconnected.');
+              stopCamera();
+            };
+          }
+
+          setCameraActive(true);
+          setTrackingStatus('CAMERA_READY');
+          setFeedback('Camera active. Position yourself sideways so hip, knee, and ankle are visible, then start exercise.');
+          await loadVideoDevices();
+        } catch (err) {
+          console.error('Camera access error:', err);
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            setCameraError('Camera permission was denied. Please allow camera access in your browser settings.');
+          } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            setCameraError('No camera found on this device.');
+          } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+            setCameraError('Camera is already in use by another application.');
+          } else {
+            setCameraError(`Camera error: ${err.message || err.name}`);
+          }
+          setCameraActive(false);
+        } finally {
+          setCameraLoading(false);
+        }
+      };
+
+      // 3. Stop Camera
+      const stopCamera = () => {
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach(t => t.stop());
+          mediaStreamRef.current = null;
+        }
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+        }
+        setCameraActive(false);
+        setTrackingStatus('OFF');
+      };
+
+      // Cleanup on component unmount
+      useEffect(() => {
+        return () => {
+          stopCamera();
+          if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+          }
+          if (frameIntervalRef.current) {
+            clearInterval(frameIntervalRef.current);
+            frameIntervalRef.current = null;
+          }
+        };
+      }, []);
+
+      // 4. Render Detected Skeleton on Overlay Canvas (Renders Active & Secondary Limbs)
+      const drawPoseOverlay = (data) => {
+        const canvas = canvasRef.current;
+        const video = videoRef.current;
+        if (!canvas || !video || !video.videoWidth) return;
+
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+        }
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const w = canvas.width;
+        const h = canvas.height;
+
+        const renderLimb = (lm, isPrimary, sideLabel) => {
+          if (!lm || !lm.hip || !lm.knee || !lm.ankle) return;
+
+          const hipPx = { x: lm.hip.x * w, y: lm.hip.y * h };
+          const kneePx = { x: lm.knee.x * w, y: lm.knee.y * h };
+          const anklePx = { x: lm.ankle.x * w, y: lm.ankle.y * h };
+
+          // Thigh
+          ctx.beginPath();
+          ctx.moveTo(hipPx.x, hipPx.y);
+          ctx.lineTo(kneePx.x, kneePx.y);
+          ctx.strokeStyle = isPrimary ? '#3b82f6' : 'rgba(148, 163, 184, 0.35)';
+          ctx.lineWidth = isPrimary ? 6 : 2;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+
+          // Shin
+          ctx.beginPath();
+          ctx.moveTo(kneePx.x, kneePx.y);
+          ctx.lineTo(anklePx.x, anklePx.y);
+          ctx.strokeStyle = isPrimary ? '#10b981' : 'rgba(148, 163, 184, 0.35)';
+          ctx.lineWidth = isPrimary ? 6 : 2;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+
+          // Joint circles
+          const drawJoint = (pt, color, radius) => {
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = color;
+            ctx.fill();
+            if (isPrimary) {
+              ctx.strokeStyle = '#ffffff';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          };
+
+          drawJoint(hipPx, isPrimary ? '#3b82f6' : 'rgba(148, 163, 184, 0.5)', isPrimary ? 8 : 4);
+          drawJoint(kneePx, isPrimary ? '#06b6d4' : 'rgba(148, 163, 184, 0.5)', isPrimary ? 10 : 5);
+          drawJoint(anklePx, isPrimary ? '#10b981' : 'rgba(148, 163, 184, 0.5)', isPrimary ? 8 : 4);
+
+          // Angle Callout Label on Active Knee
+          if (isPrimary && (data.smoothed_angle_deg !== null || data.knee_angle_deg !== null)) {
+            const displayDeg = data.smoothed_angle_deg !== null ? data.smoothed_angle_deg : data.knee_angle_deg;
+            ctx.font = 'bold 22px Inter, sans-serif';
+            const text = `${Math.round(displayDeg)}°`;
+            const textWidth = ctx.measureText(text).width;
+
+            ctx.fillStyle = 'rgba(11, 15, 25, 0.85)';
+            if (ctx.roundRect) {
+              ctx.beginPath();
+              ctx.roundRect(kneePx.x + 12, kneePx.y - 28, textWidth + 16, 32, 6);
+              ctx.fill();
+            } else {
+              ctx.fillRect(kneePx.x + 12, kneePx.y - 28, textWidth + 16, 32);
+            }
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillText(text, kneePx.x + 20, kneePx.y - 6);
+          }
+        };
+
+        const activeIsRight = (data.selected_leg || '').toUpperCase() === 'RIGHT';
+
+        // Render secondary (inactive) limb first in faint slate
+        if (activeIsRight && data.left_landmarks) {
+          renderLimb(data.left_landmarks, false, 'L');
+        } else if (!activeIsRight && data.right_landmarks) {
+          renderLimb(data.right_landmarks, false, 'R');
+        }
+
+        // Render primary active limb on top in glowing color
+        const activeLm = data.landmarks || (activeIsRight ? data.right_landmarks : data.left_landmarks);
+        if (activeLm) {
+          renderLimb(activeLm, true, activeIsRight ? 'R' : 'L');
+        }
+      };
+
+      // 5. Process structured response from Python CV Engine
+      const handleCvResponse = (data) => {
+        if (!data || data.error) {
+          if (data && data.error) console.warn('CV processor notice:', data.error);
+          return;
+        }
+
+        totalFramesRef.current += 1;
+        if (data.is_tracking_reliable) {
+          trackedFramesRef.current += 1;
+        }
+
+        setTrackingStatus(data.tracking_status || 'UNKNOWN');
+        if (data.selected_leg) setDetectedLeg(data.selected_leg);
+        setKneeAngle(data.knee_angle_deg);
+        setSmoothedAngle(data.smoothed_angle_deg);
+        setRepCount(data.repetitions || 0);
+        setStateStr(data.exercise_state || 'WAITING');
+        setFeedback(data.feedback || '');
+        setFeedbackSeverity(data.feedback_severity || 'info');
+        setLandmarkConfidence(data.landmark_confidence || 0);
+
+        if (data.metrics && data.metrics.current_excursion > 0) {
+          excursionsRef.current.push(data.metrics.current_excursion);
+        }
+        if (data.metrics && data.metrics.max_extension_in_rep > 0) {
+          maxAnglesRef.current.push(data.metrics.max_extension_in_rep);
+        }
+
+        drawPoseOverlay(data);
+      };
+
+      // 6. Send single frame to Python CV (Zero-lag ping-pong loop)
+      const captureAndSendFrame = async () => {
+        if (isProcessingFrameRef.current) return;
+        const video = videoRef.current;
+        if (!video || video.readyState < 2 || !video.videoWidth) return;
+
+        isProcessingFrameRef.current = true;
+
+        try {
+          if (!offscreenCanvasRef.current) {
+            offscreenCanvasRef.current = document.createElement('canvas');
+          }
+          const offCanvas = offscreenCanvasRef.current;
+          // 320x240 @ 0.50 JPEG gives ~8KB per frame with 100% MediaPipe fidelity
+          offCanvas.width = 320;
+          offCanvas.height = 240;
+          const ctx = offCanvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, 320, 240);
+
+          const b64Image = offCanvas.toDataURL('image/jpeg', 0.50);
+
+          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ image: b64Image }));
+            // Lock remains active until ws.onmessage arrives: guarantees ZERO queue lag!
+          } else {
+            const token = authStorage.getToken();
+            const res = await fetch(`${DJANGO_BASE_URL}/api/rehab/process-frame/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+              },
+              body: JSON.stringify({
+                session_id: sessionId,
+                image: b64Image,
+                selected_leg: selectedLeg
+              })
+            });
+            if (res.ok) {
+              const result = await res.json();
+              handleCvResponse(result);
+            }
+            isProcessingFrameRef.current = false;
+            requestAnimationFrame(() => captureAndSendFrame());
+          }
+        } catch (e) {
+          console.warn('Frame transmission error:', e);
+          isProcessingFrameRef.current = false;
+        }
+      };
+
+      // 7. Start Rehabilitation Session
+      const handleStart = async () => {
+        if (!selectedPatientId) {
+          alert('Please select a patient before starting.');
+          return;
+        }
+
+        if (!cameraActive) {
+          await startCamera();
+        }
+
+        try {
+          const res = await apiFetch('/api/rehab/sessions/', {
+            method: 'POST',
+            body: JSON.stringify({
+              patient: selectedPatientId,
+              exercise_name: 'seated_knee_extension',
+              selected_leg: selectedLeg
+            })
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || 'Failed to initiate session record.');
+          }
+
+          const sData = await res.json();
+          const activeSessionId = sData.id;
+          setSessionId(activeSessionId);
+          setSessionActive(true);
+          setReport(null);
+          setRepCount(0);
+          setKneeAngle(null);
+          setSmoothedAngle(null);
+          setStateStr('INITIALIZING');
+          setFeedback('Connecting to Python CV engine...');
+
+          sessionStartRef.current = Date.now() / 1000;
+          totalFramesRef.current = 0;
+          trackedFramesRef.current = 0;
+          excursionsRef.current = [];
+          maxAnglesRef.current = [];
+
+          const token = authStorage.getToken();
+          const wsUrl = `ws://127.0.0.1:8002`;
+          try {
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+              setTransportMode('WS');
+              ws.send(JSON.stringify({
+                action: 'auth',
+                token: token,
+                session_id: activeSessionId,
+                selected_leg: selectedLeg
+              }));
+            };
+
+            ws.onmessage = (event) => {
+              try {
+                const msg = JSON.parse(event.data);
+                if (msg.status === 'authenticated') {
+                  setFeedback('Connected to Python CV! Position yourself sideways to the camera.');
+                  isProcessingFrameRef.current = false;
+                  captureAndSendFrame();
+                } else {
+                  handleCvResponse(msg);
+                  // Release lock and immediately request next frame for real-time zero lag
+                  isProcessingFrameRef.current = false;
+                  requestAnimationFrame(() => captureAndSendFrame());
+                }
+              } catch (parseErr) {
+                console.warn('WS message parse error:', parseErr);
+                isProcessingFrameRef.current = false;
+              }
+            };
+
+            ws.onerror = () => {
+              setTransportMode('HTTP');
+            };
+
+            ws.onclose = () => {
+              setTransportMode('HTTP');
+            };
+
+            wsRef.current = ws;
+          } catch (wsErr) {
+            setTransportMode('HTTP');
+          }
+
+          if (frameIntervalRef.current) clearInterval(frameIntervalRef.current);
+          // Kick off stream immediately and maintain safety watchdog
+          captureAndSendFrame();
+          frameIntervalRef.current = setInterval(() => {
+            if (!isProcessingFrameRef.current) {
+              captureAndSendFrame();
+            }
+          }, 80);
+
+        } catch (e) {
+          alert('Could not start rehabilitation session: ' + e.message);
+          setSessionActive(false);
+        }
+      };
+
+      // 8. End & Save Session
+      const handleComplete = async () => {
+        if (!sessionId) return;
+
+        if (frameIntervalRef.current) {
+          clearInterval(frameIntervalRef.current);
+          frameIntervalRef.current = null;
+        }
+
+        if (wsRef.current) {
+          try {
+            wsRef.current.send(JSON.stringify({ action: 'finish' }));
+            wsRef.current.close();
+          } catch (e) {}
+          wsRef.current = null;
+        }
+
+        if (canvasRef.current) {
+          const ctx = canvasRef.current.getContext('2d');
+          ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        }
+
+        setSessionActive(false);
+
+        const nowSec = Date.now() / 1000;
+        const startSec = sessionStartRef.current || (nowSec - 1.0);
+        const actualDuration = Math.max(0.1, nowSec - startSec);
+
+        const totalFrames = totalFramesRef.current;
+        const trackedFrames = trackedFramesRef.current;
+        const availability = totalFrames > 0 ? (trackedFrames / totalFrames) * 100.0 : 0.0;
+
+        const allExcursions = excursionsRef.current;
+        const totalReps = repCount;
+        const avgExcursion = allExcursions.length > 0 ? (allExcursions.reduce((a, b) => a + b, 0) / allExcursions.length) : 0.0;
+        const bestExcursion = allExcursions.length > 0 ? Math.max(...allExcursions) : 0.0;
+        const maxAngle = maxAnglesRef.current.length > 0 ? Math.max(...maxAnglesRef.current) : 0.0;
+
+        try {
+          const res = await apiFetch(`/api/rehab/sessions/${sessionId}/complete/`, {
+            method: 'POST',
+            body: JSON.stringify({
+              total_reps: totalReps,
+              rejected_reps: 0,
+              set_count: 1,
+              avg_excursion_deg: Math.round(avgExcursion * 10) / 10,
+              best_excursion_deg: Math.round(bestExcursion * 10) / 10,
+              tracking_availability_pct: Math.round(availability * 10) / 10,
+              duration_sec: Math.round(actualDuration * 10) / 10,
+              notes: totalReps > 0
+                ? `Completed ${totalReps} knee extensions with ${avgExcursion.toFixed(1)}° mean excursion.`
+                : 'Session ended with 0 completed repetitions.',
+              sets: [{
+                set_number: 1,
+                reps_completed: totalReps,
+                reps_rejected: 0,
+                rest_duration_sec: 0.0,
+                avg_excursion_deg: Math.round(avgExcursion * 10) / 10,
+                max_extension_deg: Math.round(maxAngle * 10) / 10
+              }]
+            })
+          });
+
+          if (res.ok) {
+            const reportData = await res.json();
+            setReport(reportData);
+          } else {
+            alert('Failed to persist session to database.');
+          }
+        } catch (e) {
+          alert('Error saving session: ' + e.message);
+        }
+      };
+
+      return (
+        <div>
+          <div className="alert-banner warning">
+            ⚠️ Safety Notice: AI movement tracking support only; not clinical diagnostic goniometry.
+          </div>
+
+          {cameraError && (
+            <div className="alert-banner danger">
+              <span>🚫 {cameraError}</span>
+            </div>
+          )}
+
+          {/* Session Configuration & Device Bar */}
+          <div className="card" style={{ marginBottom: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr)) auto', gap: '1rem', alignItems: 'flex-end' }}>
+              <div>
+                <label className="form-label">Patient</label>
+                <select
+                  className="form-select"
+                  value={selectedPatientId}
+                  onChange={e => setSelectedPatientId(e.target.value)}
+                  disabled={sessionActive}
+                >
+                  <option value="">-- Select Patient --</option>
+                  {patients.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.patient_id} — {p.first_name} {p.last_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label">Target Leg</label>
+                <select
+                  className="form-select"
+                  value={selectedLeg}
+                  onChange={e => {
+                    const newLeg = e.target.value;
+                    setSelectedLeg(newLeg);
+                    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                      wsRef.current.send(JSON.stringify({ action: 'change_leg', selected_leg: newLeg }));
+                    }
+                  }}
+                >
+                  <option value="auto">⚡ Auto-Detect (Closest Leg)</option>
+                  <option value="left">Left Knee Extension</option>
+                  <option value="right">Right Knee Extension</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label">Webcam Source</label>
+                <select
+                  className="form-select"
+                  value={selectedDeviceId}
+                  onChange={e => setSelectedDeviceId(e.target.value)}
+                  disabled={sessionActive}
+                >
+                  {devices.length > 0 ? (
+                    devices.map((d, idx) => (
+                      <option key={d.deviceId || idx} value={d.deviceId}>
+                        {d.label || `Camera ${idx + 1}`}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">Default System Webcam</option>
+                  )}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {!cameraActive ? (
+                  <button onClick={startCamera} className="btn btn-secondary" disabled={cameraLoading}>
+                    {cameraLoading ? 'Connecting...' : '📷 Enable Camera'}
+                  </button>
+                ) : (
+                  <button onClick={stopCamera} className="btn btn-secondary" disabled={sessionActive}>
+                    ⏹ Stop Camera
+                  </button>
+                )}
+
+                {!sessionActive ? (
+                  <button
+                    onClick={handleStart}
+                    className="btn btn-primary"
+                    disabled={!selectedPatientId || cameraLoading}
+                  >
+                    ▶ Start Exercise Tracking
+                  </button>
+                ) : (
+                  <button onClick={handleComplete} className="btn btn-danger">
+                    ⏹ End & Save Session
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Video Feed & Biometrics Layout */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(380px, 1.4fr) 1fr', gap: '1.5rem' }}>
+            {/* Live Camera Feed Card */}
+            <div className="card" style={{ position: 'relative', overflow: 'hidden' }}>
+              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h3 className="card-title">Live Camera Feed</h3>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${selectedLeg === 'left' ? 'btn-primary' : ''}`}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}
+                    onClick={() => switchLeg('left')}
+                  >
+                    🦵 Track Left
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${selectedLeg === 'right' ? 'btn-primary' : ''}`}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}
+                    onClick={() => switchLeg('right')}
+                  >
+                    🦵 Track Right
+                  </button>
+                  <span className={`brand-tag ${trackingStatus === 'TRACKING' ? 'green' : (cameraActive ? 'cyan' : '')}`} style={{
+                    background: trackingStatus === 'TRACKING' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                    borderColor: trackingStatus === 'TRACKING' ? '#10b981' : '#3b82f6',
+                    color: trackingStatus === 'TRACKING' ? '#6ee7b7' : '#93c5fd'
+                  }}>
+                    {trackingStatus === 'TRACKING' ? '🟢 POSE TRACKING ACTIVE' : (cameraActive ? `📷 CAMERA READY (${transportMode})` : '⚪ CAMERA OFF')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Viewport for video and overlay canvas */}
+              <div style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '4/3',
+                backgroundColor: '#070a11',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    display: cameraActive ? 'block' : 'none'
+                  }}
+                />
+
+                <canvas
+                  ref={canvasRef}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    pointerEvents: 'none',
+                    display: cameraActive ? 'block' : 'none'
+                  }}
+                />
+
+                {!cameraActive && (
+                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                    <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>📷</div>
+                    <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Camera Not Activated</p>
+                    <p style={{ fontSize: '0.82rem', maxWidth: '340px', margin: '0 auto' }}>
+                      Click <strong>"Enable Camera"</strong> or <strong>"Start Exercise Tracking"</strong> to permit browser webcam streaming.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Real-time Dynamic Feedback Banner from Python Engine */}
+              <div className={`alert-banner ${feedbackSeverity === 'success' ? 'success' : (feedbackSeverity === 'warning' ? 'warning' : 'info')}`} style={{ marginTop: '1rem', marginBottom: 0 }}>
+                <strong>{stateStr}:</strong> {feedback}
+              </div>
+            </div>
+
+            {/* Live Biometrics Display Card */}
+            <div className="card">
+              <h3 className="card-title">Live Biometrics (Python CV)</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '1.25rem' }}>
+                Measurements computed by server-side MediaPipe Pose & vector trigonometry.
+              </p>
+
+              <div className="metrics-grid">
+                <div className="metric-tile">
+                  <span className="metric-label">Knee Angle (Raw)</span>
+                  <span className="metric-value cyan">
+                    {kneeAngle !== null ? `${Math.round(kneeAngle)}°` : '—'}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Vector Biomechanics</span>
+                </div>
+
+                <div className="metric-tile">
+                  <span className="metric-label">Filtered Angle</span>
+                  <span className="metric-value" style={{ color: '#38bdf8' }}>
+                    {smoothedAngle !== null ? `${Math.round(smoothedAngle)}°` : '—'}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Temporal Savitzky-Golay</span>
+                </div>
+
+                <div className="metric-tile">
+                  <span className="metric-label">Completed Reps</span>
+                  <span className="metric-value green">{repCount}</span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>State Machine Validated</span>
+                </div>
+
+                <div className="metric-tile">
+                  <span className="metric-label">Tracking Reliability</span>
+                  <span className="metric-value" style={{ color: trackingStatus === 'TRACKING' ? '#10b981' : '#f59e0b' }}>
+                    {trackingStatus === 'TRACKING' ? `${Math.round(landmarkConfidence * 100)}%` : 'LOST'}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Joint Visibility Mean</span>
+                </div>
+              </div>
+
+              {/* State and Target Progress */}
+              <div style={{ marginTop: '1.5rem', background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Exercise Phase:</span>
+                  <strong style={{ color: stateStr === 'EXTENDED' ? '#10b981' : (stateStr === 'EXTENDING' ? '#38bdf8' : 'var(--text-primary)') }}>
+                    {stateStr}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Tracked Limb:</span>
+                  <strong>{(detectedLeg || selectedLeg).toUpperCase()} LEG {selectedLeg === 'auto' ? '(Auto)' : ''}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Target Full Extension:</span>
+                  <span style={{ fontFamily: 'var(--font-mono)' }}>≥ 155°</span>
+                </div>
+              </div>
+
+              {/* Technical Diagnostics */}
+              <div style={{ marginTop: '1.25rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                <p>Engine: <code>rehab_cv (MediaPipe Pose 0.10)</code></p>
+                <p>Transport: <code>{transportMode} streaming ({totalFramesRef.current} frames processed)</code></p>
+              </div>
+            </div>
+          </div>
+
+          {/* Persistent Database Session Summary */}
+          {report && (
+            <div className="card" style={{ borderColor: 'var(--success-green)', marginTop: '1.5rem' }}>
+              <div className="card-header">
+                <div>
+                  <h2 className="card-title" style={{ color: 'var(--success-green)' }}>
+                    ✅ Rehabilitation Session Saved to Database
+                  </h2>
+                  <span style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                    Session ID: <code>{report.id}</code> | Patient: <strong>{report.patient_mrn}</strong>
+                  </span>
+                </div>
+                <span className="brand-tag green">COMPLETED</span>
+              </div>
+
+              <div className="metrics-grid">
+                <div className="metric-tile">
+                  <span className="metric-label">Total Repetitions</span>
+                  <span className="metric-value green">{report.total_reps}</span>
+                </div>
+                <div className="metric-tile">
+                  <span className="metric-label">Mean ROM Excursion</span>
+                  <span className="metric-value cyan">{report.avg_excursion_deg}°</span>
+                </div>
+                <div className="metric-tile">
+                  <span className="metric-label">Best Extension</span>
+                  <span className="metric-value">{report.best_excursion_deg}°</span>
+                </div>
+                <div className="metric-tile">
+                  <span className="metric-label">Session Duration</span>
+                  <span className="metric-value">{report.duration_sec}s</span>
+                </div>
+                <div className="metric-tile">
+                  <span className="metric-label">Tracking Availability</span>
+                  <span className="metric-value">{report.tracking_availability_pct}%</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+                    // --- TAB: PATIENTS ---
+                    function PatientsTab({patients, onRefresh, onSelectScreening, onSelectRehab}) {
+      const [showAdd, setShowAdd] = useState(false);
+                    const [mrn, setMrn] = useState('');
+                    const [fname, setFname] = useState('');
+                    const [lname, setLname] = useState('');
+
+      const handleAdd = async (e) => {
+                      e.preventDefault();
+                    try {
+          const res = await apiFetch('/api/screening/patients/', {
+                      method: 'POST',
+                    body: JSON.stringify({patient_id: mrn || `MRN-${Math.floor(1000 + Math.random() * 9000)}`, first_name: fname, last_name: lname, gender: 'M' })
+          });
+                    if (res.ok) {setShowAdd(false); setFname(''); setLname(''); onRefresh(); }
+                    else alert('Failed to create patient');
+        } catch (e) {alert(e.message); }
+      };
+
+                    return (
+                    <div className="card">
+                      <div className="card-header">
+                        <h2 className="card-title">👥 Patients Directory</h2>
+                        <button onClick={() => setShowAdd(!showAdd)} className="btn btn-primary btn-sm">{showAdd ? 'Cancel' : '+ New Patient'}</button>
+                      </div>
+                      {showAdd && (
+                        <form onSubmit={handleAdd} className="card" style={{ background: 'var(--bg-secondary)', marginBottom: '1rem' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'flex-end' }}>
+                            <div><label className="form-label">MRN</label><input type="text" className="form-input" placeholder="MRN-101" value={mrn} onChange={e => setMrn(e.target.value)} /></div>
+                            <div><label className="form-label">First Name</label><input type="text" className="form-input" required value={fname} onChange={e => setFname(e.target.value)} /></div>
+                            <div><label className="form-label">Last Name</label><input type="text" className="form-input" required value={lname} onChange={e => setLname(e.target.value)} /></div>
+                            <button type="submit" className="btn btn-success btn-sm">Save</button>
+                          </div>
+                        </form>
+                      )}
+                      <table className="data-table">
+                        <thead>
+                          <tr><th>MRN</th><th>Name</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                          {patients.map(p => (
+                            <tr key={p.id}>
+                              <td><code>{p.patient_id}</code></td>
+                              <td><strong>{p.first_name} {p.last_name}</strong></td>
+                              <td>
+                                <button onClick={() => onSelectScreening(p)} className="btn btn-primary btn-sm" style={{ marginRight: '0.5rem' }}>🩻 Screen</button>
+                                <button onClick={() => onSelectRehab(p)} className="btn btn-secondary btn-sm">🏃 Rehab</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    );
+    }
+
+                    // --- TAB: HISTORY ---
+                    function HistoryTab() {
+      const [sessions, setSessions] = useState([]);
+      useEffect(() => {
+                      apiFetch('/api/rehab/sessions/').then(r => r.json()).then(d => setSessions(Array.isArray(d) ? d : d.results || [])).catch(console.warn);
+      }, []);
+                    return (
+                    <div className="card">
+                      <h2 className="card-title">📊 Rehab Session Records</h2>
+                      <table className="data-table">
+                        <thead><tr><th>Patient</th><th>Exercise</th><th>Reps</th><th>Sets</th><th>Status</th><th>Date</th></tr></thead>
+                        <tbody>
+                          {sessions.map(s => (
+                            <tr key={s.id}>
+                              <td>{s.patient_mrn} ({s.patient_name})</td>
+                              <td>{s.exercise_name}</td>
+                              <td><strong style={{ color: 'var(--success-green)' }}>{s.total_reps}</strong></td>
+                              <td>{s.set_count}</td>
+                              <td><span className="brand-tag">{s.status}</span></td>
+                              <td>{new Date(s.created_at).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    );
+    }
+
+                    // --- TAB: INSPECTOR ---
+                    function InspectorTab() {
+      const [url, setUrl] = useState(`${FASTAPI_BASE_URL}/health`);
+                    const [resText, setResText] = useState('');
+      const run = async () => {
+        try {
+          const res = await fetch(url);
+                    const json = await res.json();
+                    setResText(JSON.stringify(json, null, 2));
+        } catch (e) {setResText('Error: ' + e.message); }
+      };
+                    return (
+                    <div className="card">
+                      <h2 className="card-title">🩺 API Inspector</h2>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                        <input className="form-input" value={url} onChange={e => setUrl(e.target.value)} style={{ flex: 1 }} />
+                        <button onClick={run} className="btn btn-primary">Execute</button>
+                      </div>
+                      <pre className="code-block">{resText || 'Response will appear here'}</pre>
+                    </div>
+                    );
+    }
+
+                    // --- TAB: AUTH ---
+                    function AuthTab({user, setUser, onSuccess}) {
+      const [u, setU] = useState('dr_sharma');
+                    const [p, setP] = useState('SecurePass123!');
+                    const [msg, setMsg] = useState('');
+      const handleLogin = async (e) => {
+                      e.preventDefault();
+                    try {
+          const res = await fetch(`${DJANGO_BASE_URL}/api/auth/token/`, {
+                      method: 'POST',
+                    headers: {'Content-Type': 'application/json' },
+                    body: JSON.stringify({username: u, password: p })
+          });
+                    if (res.ok) {
+            const d = await res.json();
+                    authStorage.setTokens(d.access);
+                    authStorage.setUser({username: u });
+                    setUser({username: u });
+                    setMsg('Logged in!');
+                    if (onSuccess) onSuccess();
+          } else {setMsg('Invalid credentials'); }
+        } catch (err) {setMsg('Network error: ' + err.message); }
+      };
+                    return (
+                    <div className="card" style={{ maxWidth: '480px', margin: '0 auto' }}>
+                      <h2 className="card-title">🔐 Clinician Login</h2>
+                      {msg && <div className="alert-banner info">{msg}</div>}
+                      <form onSubmit={handleLogin}>
+                        <div className="form-group"><label className="form-label">Username</label><input className="form-input" value={u} onChange={e => setU(e.target.value)} /></div>
+                        <div className="form-group"><label className="form-label">Password</label><input type="password" className="form-input" value={p} onChange={e => setP(e.target.value)} /></div>
+                        <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Sign In</button>
+                      </form>
+                    </div>
+                    );
+    }
+
+                    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+
+</html>

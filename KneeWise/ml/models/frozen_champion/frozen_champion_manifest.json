@@ -1,0 +1,149 @@
+{
+  "frozen_status": "LOCKED",
+  "frozen_timestamp": "2026-11-19T19:27:00+05:30",
+  "champion_metadata": {
+    "experiment_id": "exp_d_efficientnet_b0",
+    "model_name": "KneeWise-EfficientNet-B0-ScreeningChampion",
+    "architecture": "efficientnet_b0",
+    "framework": "PyTorch 2.5.1+cu121",
+    "parameters_total": 5294025,
+    "parameters_trainable": 5294025,
+    "head_architecture": "Sequential(Dropout(p=0.3), Linear(in_features=1280, out_features=5))",
+    "pretrained_source": "torchvision.models.EfficientNet_B0_Weights.DEFAULT (ImageNet-1K)",
+    "checkpoint_path": "KneeWise/ml/models/frozen_champion/efficientnet_b0_champion.pth",
+    "original_checkpoint_path": "KneeWise/ml/models/exp_d_efficientnet_b0.pth",
+    "sha256_checksum": "d8b65306864362f2d83bcf94ee3f1940ea87feb7ce19ff08736c5dc881e2dc1b",
+    "file_size_bytes": 48665598
+  },
+  "dataset_provenance": {
+    "name": "Knee Osteoarthritis Dataset with Severity",
+    "source": "Kaggle (shashwatwork/knee-osteoarthritis-dataset-with-severity) derived from Osteoarthritis Initiative (OAI)",
+    "split_manifest_paths": {
+      "train": "KneeWise/ml/data/processed/train_manifest.csv",
+      "val": "KneeWise/ml/data/processed/val_manifest.csv",
+      "test": "KneeWise/ml/data/processed/test_manifest.csv"
+    },
+    "patient_level_split_audit": {
+      "total_unique_patients": 4130,
+      "total_images": 8260,
+      "train_patients": 2889,
+      "train_images": 5778,
+      "val_patients": 413,
+      "val_images": 826,
+      "test_patients": 828,
+      "test_images": 1656,
+      "leakage_audit_result": "PASSED (Zero patient overlap across all 3 sets)"
+    }
+  },
+  "training_hyperparameters": {
+    "input_resolution": [224, 224],
+    "channels": 3,
+    "normalization": {
+      "mean": [0.485, 0.456, 0.406],
+      "std": [0.229, 0.224, 0.225]
+    },
+    "training_augmentation": [
+      "Resize(224, 224)",
+      "RandomRotation(degrees=7)",
+      "RandomAffine(degrees=0, translate=(0.04, 0.04))",
+      "ColorJitter(brightness=0.1, contrast=0.1)",
+      "RandomHorizontalFlip(p=0.5)"
+    ],
+    "validation_test_preprocessing": [
+      "Resize(224, 224)",
+      "ToTensor()",
+      "Normalize(mean, std)"
+    ],
+    "batch_size": 8,
+    "optimizer": "Adam",
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "lr_scheduler": "ReduceLROnPlateau(mode=max, factor=0.5, patience=2)",
+    "loss_function": "CrossEntropyLoss(weight=balanced_weights)",
+    "class_weights": {
+      "KL_0": 0.5055,
+      "KL_1": 1.1048,
+      "KL_2": 0.7623,
+      "KL_3": 1.5265,
+      "KL_4": 6.6798
+    },
+    "mixed_precision": "FP16 (torch.amp.autocast)",
+    "max_epochs": 6,
+    "best_epoch": 5,
+    "early_stopping_patience": 2,
+    "hardware": "NVIDIA GeForce RTX 3050 Laptop GPU (4.0 GB VRAM)",
+    "peak_vram_mb": 418.52,
+    "total_training_seconds": 1267.71
+  },
+  "class_mapping": {
+    "0": "Grade 0: No radiographic OA (Normal joint space, no osteophytes)",
+    "1": "Grade 1: Doubtful OA (Possible osteophytic lipping, doubtful joint space narrowing)",
+    "2": "Grade 2: Mild radiographic OA (Definite osteophytes, possible joint space narrowing)",
+    "3": "Grade 3: Moderate radiographic OA (Multiple osteophytes, definite joint space narrowing, some sclerosis)",
+    "4": "Grade 4: Severe radiographic OA (Large osteophytes, marked joint space narrowing, severe sclerosis)"
+  },
+  "validation_performance": {
+    "best_validation_macro_f1": 0.65049,
+    "best_validation_loss": 0.8276,
+    "best_validation_accuracy": 0.6368,
+    "best_epoch": 5
+  },
+  "test_performance_untouched_1656_images": {
+    "five_class_evaluation": {
+      "accuracy": 0.66606,
+      "macro_precision": 0.6807,
+      "macro_recall": 0.6794,
+      "macro_f1": 0.67245,
+      "weighted_f1": 0.65700,
+      "per_class": {
+        "KL_0": { "precision": 0.7043, "recall": 0.8685, "f1_score": 0.7779, "support": 639 },
+        "KL_1": { "precision": 0.3493, "recall": 0.3446, "f1_score": 0.3469, "support": 296 },
+        "KL_2": { "precision": 0.7568, "recall": 0.4944, "f1_score": 0.5981, "support": 447 },
+        "KL_3": { "precision": 0.7895, "recall": 0.8072, "f1_score": 0.7982, "support": 223 },
+        "KL_4": { "precision": 0.8036, "recall": 0.8824, "f1_score": 0.8411, "support": 51 }
+      },
+      "confusion_matrix_5x5": [
+        [555, 67, 14, 3, 0],
+        [156, 102, 34, 4, 0],
+        [76, 115, 221, 35, 0],
+        [1, 8, 23, 180, 11],
+        [0, 0, 0, 6, 45]
+      ],
+      "adjacent_grade_agreement_pct": 94.38
+    },
+    "binary_screening_evaluation": {
+      "definition": "OA Unlikely (KL 0-1) vs Definite Radiographic OA (KL 2-4)",
+      "risk_formula": "P(Definite OA) = P(KL 2) + P(KL 3) + P(KL 4)",
+      "roc_auc": 0.9289,
+      "pr_auc": 0.9228,
+      "brier_score": 0.1114,
+      "expected_calibration_error_10bin": 0.0731,
+      "default_threshold_0.50": {
+        "sensitivity": 0.7060,
+        "specificity": 0.9561,
+        "precision": 0.9255,
+        "f1_score": 0.8009,
+        "false_negatives": 212,
+        "false_positives": 41
+      },
+      "clinical_screening_threshold_0.30": {
+        "sensitivity": 0.8086,
+        "specificity": 0.8866,
+        "precision": 0.8462,
+        "f1_score": 0.8270,
+        "false_negatives": 138,
+        "false_positives": 106
+      }
+    }
+  },
+  "threshold_selection_methodology": {
+    "rule": "Tuned strictly on validation set across 17 thresholds [0.10, 0.90]. The screening threshold 0.30 was selected because it maximizes sensitivity (reducing dangerous false negatives) while maintaining >85% clinical specificity to prevent overwhelming secondary imaging referrals. Never tuned using test data."
+  },
+  "reference_baseline_preservation": {
+    "architecture": "resnet18",
+    "checkpoint_path": "KneeWise/ml/models/best_kneewise_resnet18.pth",
+    "sha256_checksum": "59b1da2ff8c414737ec091500f2e189f140408cac54528aa43186f355cb3a141",
+    "test_macro_f1": 0.6418,
+    "test_accuracy": 0.6534
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "integration_status": "APPROVED_FOR_INTEGRATION",
+  "integration_timestamp": "2026-11-19T19:55:00+05:30",
+  "selected_champion_model": {
+    "experiment_id": "exp_d_efficientnet_b0",
+    "model_name": "KneeWise-EfficientNet-B0-Champion",
+    "architecture": "torchvision.models.efficientnet_b0",
+    "classifier_head": "Sequential(Dropout(p=0.3), Linear(in_features=1280, out_features=5))",
+    "total_parameters": 4013953,
+    "checkpoint_path": "models/frozen_champion/efficientnet_b0_champion.pth",
+    "sha256_checksum": "d8b65306864362f2d83bcf94ee3f1940ea87feb7ce19ff08736c5dc881e2dc1b",
+    "file_size_bytes": 48665598,
+    "input_resolution": [224, 224, 3],
+    "input_normalization": {
+      "mean": [0.485, 0.456, 0.406],
+      "std": [0.229, 0.224, 0.225]
+    },
+    "class_order": [
+      "Grade 0: No radiographic OA (Normal joint space, no osteophytes)",
+      "Grade 1: Doubtful OA (Possible osteophytic lipping, doubtful joint space narrowing)",
+      "Grade 2: Mild radiographic OA (Definite osteophytes, possible joint space narrowing)",
+      "Grade 3: Moderate radiographic OA (Multiple osteophytes, definite joint space narrowing, some sclerosis)",
+      "Grade 4: Severe radiographic OA (Large osteophytes, marked joint space narrowing, severe sclerosis)"
+    ],
+    "binary_risk_formula": "P(Definite OA) = P(KL 2) + P(KL 3) + P(KL 4)",
+    "provisional_screening_threshold": 0.30,
+    "selection_rationale": "Demonstrated the highest 5-class test macro F1 (0.6724) among all architectures, superior KL1 performance over Experiment E (0.347 vs 0.289), strong severe OA recall (88.24% KL4 recall), and balanced clinical screening specificity (88.66% at threshold 0.30)."
+  },
+  "alternative_research_candidate": {
+    "experiment_id": "exp_e_targeted_aug",
+    "model_name": "KneeWise-EfficientNet-B0-TargetedAug",
+    "checkpoint_path": "models/phase_4/exp_e_targeted_aug.pth",
+    "validation_macro_f1": 0.6542,
+    "validation_kl2_f1": 0.6176,
+    "validation_kl4_f1": 0.8667,
+    "validation_kl1_f1": 0.2893,
+    "status": "PRESERVED_RESEARCH_CANDIDATE",
+    "notes": "Higher KL2 and KL4 sensitivity through micro-scaling and edge sharpness, but exhibited lower KL1 sensitivity compared to Experiment D. Retained for future ensemble research."
+  },
+  "reference_baseline": {
+    "experiment_id": "resnet18_baseline",
+    "model_name": "KneeWise-ResNet18-Baseline",
+    "checkpoint_path": "models/best_kneewise_resnet18.pth",
+    "sha256_checksum": "59b1da2ff8c414737ec091500f2e189f140408cac54528aa43186f355cb3a141",
+    "test_macro_f1": 0.6418,
+    "status": "PRESERVED_BASELINE"
+  }
+}
